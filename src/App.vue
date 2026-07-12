@@ -147,6 +147,8 @@ const sparks = computed(() => Array.from({ length: 15 }, (_, i) => {
 
 <template>
   <div class="lv-page">
+    <!-- dims + blurs the whole page behind an open tooltip; click anywhere to dismiss -->
+    <div v-if="help" class="lv-scrim" @click="help = null"></div>
     <div style="width: 100%; max-width: 452px;">
 
       <div style="display: flex; align-items: center; gap: 10px; justify-content: center; margin-bottom: 22px;">
@@ -288,6 +290,15 @@ textarea, input, button { font-family: inherit; }
   color: #2b2622; background: #fdfaf5;
 }
 .lv-input:focus { outline: none; border-color: #f7931a; background: #fffdf9; }
+
+.lv-scrim {
+  position: fixed; inset: 0; z-index: 15; cursor: default;
+  background: rgba(253, 250, 245, .4);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  animation: lvFade .18s ease both;
+}
+@keyframes lvFade { from { opacity: 0; } to { opacity: 1; } }
 
 .lv-tip {
   position: absolute; z-index: 20; top: 26px; left: 0; right: 0;
