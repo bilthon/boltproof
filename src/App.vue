@@ -173,7 +173,7 @@ const sparks = computed(() => Array.from({ length: 15 }, (_, i) => {
             <textarea v-model="invoice" rows="2" placeholder="lnbc500u1p3…" spellcheck="false" class="lv-input"
               style="width: 100%; resize: none; font-family: 'Space Mono', monospace; font-size: 12.5px; line-height: 1.5; word-break: break-all;"></textarea>
             <div v-if="help === 'invoice'" class="lv-tip">
-              <span class="lv-tip-arrow" style="left: 96px;"></span>
+              <span class="lv-tip-arrow" style="left: 106px;"></span>
               The invoice is the payment request you sent — a long code starting with <span style="font-family: 'Space Mono', monospace; color: #ffc477;">lnbc</span>. It contains the amount and a locked fingerprint of the payment.
             </div>
           </div>
