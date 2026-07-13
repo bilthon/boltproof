@@ -12,6 +12,7 @@ const error = ref(null)
 const outcome = ref(null)          // null | 'verified' | 'mismatch'
 const decoded = ref(null)
 const saved = ref(false)
+const nodeCopied = ref(false)
 
 const canVerify = computed(() => invoice.value.trim().length > 0 && preimage.value.trim().length > 0)
 
@@ -60,6 +61,17 @@ function reset() {
   help.value = null
   error.value = null
   saved.value = false
+  nodeCopied.value = false
+}
+
+async function copyNodePubkey() {
+  const k = decoded.value?.nodePubkey
+  if (!k) return
+  try {
+    await navigator.clipboard.writeText(k)
+    nodeCopied.value = true
+    setTimeout(() => (nodeCopied.value = false), 1500)
+  } catch {}
 }
 
 function fillExample() {
@@ -264,7 +276,14 @@ const sparks = computed(() => Array.from({ length: 15 }, (_, i) => {
               </div>
               <div style="display: flex; justify-content: space-between; gap: 12px;">
                 <span style="font-size: 12.5px; color: #a89c8c;">Signed by node</span>
-                <span style="font-size: 12.5px; font-weight: 600; color: #4a423a; text-align: right; font-family: 'Space Mono', monospace;">{{ nodeText }}</span>
+                <button
+                  v-if="decoded?.nodePubkey"
+                  type="button"
+                  class="lv-copy-node"
+                  :title="nodeCopied ? 'Copied!' : 'Click to copy node ID'"
+                  @click="copyNodePubkey"
+                >{{ nodeCopied ? 'Copied!' : nodeText }}</button>
+                <span v-else style="font-size: 12.5px; font-weight: 600; color: #4a423a; text-align: right; font-family: 'Space Mono', monospace;">{{ nodeText }}</span>
               </div>
             </div>
           </div>
@@ -340,6 +359,15 @@ textarea, input, button { font-family: inherit; }
 
 .lv-hover-bright:not(:disabled):hover { filter: brightness(1.04); }
 .lv-save:hover { border-color: #f7931a; color: #b96b0a; }
+
+.lv-copy-node {
+  border: none; padding: 0; margin: 0; background: none;
+  font-size: 12.5px; font-weight: 600; color: #4a423a; text-align: right;
+  font-family: 'Space Mono', monospace; cursor: pointer;
+  transition: color .15s;
+}
+.lv-copy-node:hover { color: #b96b0a; }
+.lv-copy-node:active { color: #f7931a; }
 
 @keyframes lvPop { 0% { transform: scale(.85); opacity: 0; } 60% { transform: scale(1.03); } 100% { transform: scale(1); opacity: 1; } }
 @keyframes lvRise { 0% { transform: translateY(14px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
