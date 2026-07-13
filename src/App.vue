@@ -17,26 +17,38 @@ const canVerify = computed(() => invoice.value.trim().length > 0 && preimage.val
 
 function toggleHelp(k) { help.value = help.value === k ? null : k }
 
+function invoiceError(e) {
+  const m = e?.message ?? ''
+  if (m.includes('signature')) return "This invoice's signature doesn't check out — it may have been altered. Use the original invoice from the payee's node."
+  if (m.includes('checksum')) return "This invoice looks corrupted or altered (bad checksum). Double-check you copied every character."
+  return "That doesn't look like a valid Lightning invoice — check you copied all of it."
+}
+
 async function verify() {
   if (!canVerify.value || phase.value === 'verifying') return
   error.value = null
-  let d, preBytes
-  try { d = decodeInvoice(invoice.value) }
-  catch { error.value = "That doesn't look like a valid Lightning invoice — check you copied all of it."; return }
+  let preBytes
   try { preBytes = hexToBytes(preimage.value) }
   catch { error.value = 'The preimage should be 64 hexadecimal characters (the secret).'; return }
 
   help.value = null
   phase.value = 'verifying'
-  // ponytail: sha256 is instant; the min-delay just lets the "verifying" animation land.
-  const [hash] = await Promise.all([
-    sha256Hex(preBytes),
-    new Promise((r) => setTimeout(r, 750)),
-  ])
-  decoded.value = d
-  outcome.value = hash === d.paymentHash ? 'verified' : 'mismatch'
-  saved.value = false
-  phase.value = 'result'
+  try {
+    // decodeInvoice validates the bech32 checksum and the node's signature.
+    // ponytail: the min-delay just lets the "verifying" animation land.
+    const [d, hash] = await Promise.all([
+      decodeInvoice(invoice.value),
+      sha256Hex(preBytes),
+      new Promise((r) => setTimeout(r, 750)),
+    ])
+    decoded.value = d
+    outcome.value = hash === d.paymentHash ? 'verified' : 'mismatch'
+    saved.value = false
+    phase.value = 'result'
+  } catch (e) {
+    phase.value = 'idle'
+    error.value = invoiceError(e)
+  }
 }
 
 function reset() {
@@ -51,7 +63,9 @@ function reset() {
 }
 
 function fillExample() {
-  invoice.value = 'lnbc500u1p49ynagpp5cw22xc3ges5j6lgvte095z4v47ymk72gtl277rqz4hjlcskmwgfqdpggdhkven9v5sxzapq2dshgmmndp5jwueqgdskdsafqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq9nyher'
+  // A real, signed BOLT11 invoice (with an `n` payee-pubkey tag) and its
+  // matching preimage, so both the signature and the preimage check pass.
+  invoice.value = 'lnbc500u1pvjluezpp5cw22xc3ges5j6lgvte095z4v47ymk72gtl277rqz4hjlcskmwgfqdqlgdhkven9v5sxzapq2dshgmmndp5jwucnp4q0n326hr8v9zprg8gsvezcch06gfaqqhde2aj730yg0durunfhv66c7q0mk0h076eyhet8q9ddk6wz77x67qw2v59j0yr98e59nm5k3shurfzlealpzr92ec2qx3vx204r07elndhrklje9ru0l9sqq4cnpcqh8tc2p'
   preimage.value = '4c7f3a91e2b8d05f6a1c9e3b7d24f80a5e6c1b9384f7a2d0e5c8b1a6f39d47e2'
   help.value = null
   error.value = null
@@ -68,11 +82,12 @@ function saveProof() {
     'Invoice created: ' + whenText.value,
     'Network:         ' + d.network,
     '',
+    'Signed by node:  ' + d.nodePubkey,
     'Payment hash:    ' + d.paymentHash,
     'Preimage:        ' + preimage.value.trim().toLowerCase(),
     'Invoice:         ' + invoice.value.trim(),
     '',
-    'Verified locally: sha256(preimage) == payment_hash',
+    'Verified locally: valid BOLT11 signature && sha256(preimage) == payment_hash',
   ].join('\n')
   const url = URL.createObjectURL(new Blob([text], { type: 'text/plain' }))
   const a = document.createElement('a')
@@ -98,6 +113,10 @@ const memoText = computed(() => decoded.value?.description || '—')
 const whenText = computed(() => {
   const t = decoded.value?.timestamp
   return t ? new Date(t * 1000).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : '—'
+})
+const nodeText = computed(() => {
+  const k = decoded.value?.nodePubkey
+  return k ? k.slice(0, 10) + '…' + k.slice(-6) : '—'
 })
 
 const verifyBtnStyle = computed(() => ({
@@ -239,9 +258,13 @@ const sparks = computed(() => Array.from({ length: 15 }, (_, i) => {
                 <span style="font-size: 12.5px; color: #a89c8c;">Paid for</span>
                 <span style="font-size: 12.5px; font-weight: 600; color: #4a423a; text-align: right;">{{ memoText }}</span>
               </div>
-              <div style="display: flex; justify-content: space-between; gap: 12px;">
+              <div style="display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px;">
                 <span style="font-size: 12.5px; color: #a89c8c;">Invoice created</span>
                 <span style="font-size: 12.5px; font-weight: 600; color: #4a423a; text-align: right;">{{ whenText }}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; gap: 12px;">
+                <span style="font-size: 12.5px; color: #a89c8c;">Signed by node</span>
+                <span style="font-size: 12.5px; font-weight: 600; color: #4a423a; text-align: right; font-family: 'Space Mono', monospace;">{{ nodeText }}</span>
               </div>
             </div>
           </div>
