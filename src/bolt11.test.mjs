@@ -81,4 +81,27 @@ assert(await sha256Hex(hexToBytes(attackerPreimage)) === tamperedHash, 'attacker
 // 4) Control: the untouched invoice still decodes fine.
 assert((await decodeInvoice(signed)).signatureValid === true, 'control: original invoice still verifies')
 
+// BIP173: decoders MUST reject mixed case, and MUST accept all-uppercase.
+// The checksum is case-insensitive, so this is a separate check from the checksum.
+await assertThrows(() => decodeInvoice('L' + inv.slice(1)), /mixed-case/, 'rejects mixed-case HRP')
+const sep = inv.indexOf('1')
+const mixedData = inv.slice(0, sep + 1) + inv[sep + 1].toUpperCase() + inv.slice(sep + 2)
+await assertThrows(() => decodeInvoice(mixedData), /mixed-case/, 'rejects mixed-case data part')
+await assertThrows(
+  () => decodeInvoice('lightning:' + 'L' + inv.slice(1)),
+  /mixed-case/,
+  'rejects mixed-case invoice after a lightning: prefix',
+)
+
+const upper = await decodeInvoice(inv.toUpperCase())
+assert(upper.paymentHash === d.paymentHash, 'uppercase invoice: payment_hash')
+assert(upper.description === d.description, 'uppercase invoice: description')
+assert(upper.nodePubkey === d.nodePubkey, 'uppercase invoice: recovered pubkey')
+assert(upper.amountMsat === d.amountMsat, 'uppercase invoice: amount')
+const upperPrefixed = await decodeInvoice('LIGHTNING:' + inv.toUpperCase())
+assert(upperPrefixed.paymentHash === d.paymentHash, 'uppercase invoice with LIGHTNING: prefix')
+// The URI scheme is not part of the bech32 string, so its case is independent.
+const mixedScheme = await decodeInvoice('Lightning:' + inv)
+assert(mixedScheme.paymentHash === d.paymentHash, 'mixed-case URI scheme still decodes a lowercase invoice')
+
 console.log('\nall passed')

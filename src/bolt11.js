@@ -8,6 +8,9 @@ import * as secp from '@noble/secp256k1'
 const CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l'
 
 function bech32Words(str) {
+  // BIP173: the checksum is case-insensitive, so mixed case must be rejected
+  // before lowercasing. All-uppercase is valid and is normalized below.
+  if (/[a-z]/.test(str) && /[A-Z]/.test(str)) throw new Error('mixed-case bech32')
   const s = str.toLowerCase()
   const pos = s.lastIndexOf('1')
   if (pos < 1) throw new Error('not a bech32 string')

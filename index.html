@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>boltproof — Verify Lightning Payments Locally</title>
-  <meta name="description" content="Verify Lightning Network payments in your browser. Check a BOLT11 invoice's signature and that the preimage matches its payment hash — no account, no server, all local." />
+  <meta name="description" content="Check whether a Lightning invoice was paid. The signature and preimage are verified in your browser; the invoice and preimage are never transmitted." />
   <meta name="theme-color" content="#f7931a" />
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
   <link rel="canonical" href="https://boltproof.app/" />
@@ -14,7 +14,7 @@
   <meta property="og:site_name" content="boltproof" />
   <meta property="og:url" content="https://boltproof.app/" />
   <meta property="og:title" content="boltproof — Verify Lightning Payments Locally" />
-  <meta property="og:description" content="Check if a Lightning payment is real. Validate a BOLT11 invoice's signature and preimage hash locally in your browser." />
+  <meta property="og:description" content="Check whether a Lightning invoice was paid. Validate the signature and preimage hash in your browser. A match shows the invoice was paid, not who paid." />
   <meta property="og:image" content="https://boltproof.app/og-image.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
@@ -22,7 +22,7 @@
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:url" content="https://boltproof.app/" />
   <meta name="twitter:title" content="boltproof — Verify Lightning Payments Locally" />
-  <meta name="twitter:description" content="Check if a Lightning payment is real. Validate a BOLT11 invoice's signature and preimage hash locally in your browser." />
+  <meta name="twitter:description" content="Check whether a Lightning invoice was paid. Validate the signature and preimage hash in your browser. A match shows the invoice was paid, not who paid." />
   <meta name="twitter:image" content="https://boltproof.app/og-image.png" />
 
   <link rel="icon" href="/favicon.ico" sizes="any" />
@@ -42,16 +42,16 @@
     "alternateName": "boltproof — Lightning Payment Verifier",
     "url": "https://boltproof.app/",
     "image": "https://boltproof.app/og-image.png",
-    "description": "Verify Lightning Network payments in your browser. Check a BOLT11 invoice's signature and that the preimage matches its payment hash — no account, no server, all local.",
+    "description": "Check whether a BOLT11 Lightning invoice was paid. The signature and preimage are verified in your browser; the invoice and preimage are never transmitted.",
     "applicationCategory": "FinanceApplication",
     "operatingSystem": "Any (web browser)",
     "browserRequirements": "Requires JavaScript",
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
     "isAccessibleForFree": true,
     "featureList": [
-      "BOLT11 invoice signature validation",
-      "SHA-256 preimage / payment-hash verification",
-      "Runs entirely client-side — no data leaves the browser",
+      "BOLT11 invoice signature validation (authenticates the signing node, not a payer)",
+      "SHA-256 preimage check that the invoice was paid, not who paid",
+      "Invoice and preimage are checked in the browser and are never transmitted",
       "No account required"
     ]
   }
@@ -60,14 +60,14 @@
 <body>
   <noscript>
     <main style="max-width: 620px; margin: 40px auto; padding: 0 20px; font-family: system-ui, sans-serif; line-height: 1.6; color: #2b2622;">
-      <h1>boltproof — verify Lightning payments locally</h1>
-      <p>boltproof confirms whether a Bitcoin Lightning payment is real, entirely in your browser. Paste a BOLT11 invoice and the preimage (the payment secret) and it checks two things: that the invoice's signature is valid, and that <code>sha256(preimage)</code> equals the payment hash inside the invoice.</p>
-      <h2>What it proves</h2>
-      <p>Only the party who actually paid receives the preimage. If it matches the invoice's payment hash and the invoice signature checks out, the payment provably happened — no bank, receipt, or third party required.</p>
+      <h1>boltproof — check whether a Lightning invoice was paid</h1>
+      <p>boltproof checks a BOLT11 invoice in your browser. Paste the invoice and a preimage and it checks two things: that the invoice signature is valid, and that <code>sha256(preimage)</code> equals the payment hash inside the invoice.</p>
+      <h2>What a match shows</h2>
+      <p>A matching preimage shows the invoice was paid, not who paid. The recipient created the preimage, and anyone who knows it can present it. The signature authenticates the node that signed the invoice, not a payer. If the invoice has no amount, the preimage does not prove how much was paid.</p>
       <h2>Who it's for</h2>
-      <p>Merchants and freelancers confirming a customer really paid a Lightning invoice, and Bitcoin/Lightning developers verifying BOLT11 invoices and preimage/payment-hash mechanics.</p>
-      <h2>Private by design</h2>
-      <p>No account, no server, no data stored — every check runs client-side. JavaScript is required to use the tool.</p>
+      <p>Merchants and freelancers checking that a Lightning invoice was paid, and anyone comparing a BOLT11 invoice with a preimage.</p>
+      <h2>Privacy</h2>
+      <p>No account. Your invoice and preimage are checked in the browser and are never transmitted. The page loads fonts from Google Fonts; that request does not include them. JavaScript is required to use the tool.</p>
     </main>
   </noscript>
   <div id="app"></div>
