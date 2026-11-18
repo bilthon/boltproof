@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node src/bolt11.test.mjs"
+    "test": "node src/bolt11.test.mjs && node src/copy.test.mjs && node src/seo.test.mjs"
   },
   "dependencies": {
     "@noble/secp256k1": "^3.1.0",

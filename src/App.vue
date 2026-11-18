@@ -21,6 +21,7 @@ function toggleHelp(k) { help.value = help.value === k ? null : k }
 function invoiceError(e) {
   const m = e?.message ?? ''
   if (m.includes('signature')) return "This invoice's signature doesn't check out — it may have been altered. Use the original invoice from the payee's node."
+  if (m.includes('mixed-case')) return "Lightning invoices must be all lowercase or all uppercase. Mixed case is invalid."
   if (m.includes('checksum')) return "This invoice looks corrupted or altered (bad checksum). Double-check you copied every character."
   return "That doesn't look like a valid Lightning invoice — check you copied all of it."
 }
@@ -86,11 +87,15 @@ function fillExample() {
 function saveProof() {
   const d = decoded.value
   const text = [
-    'boltproof — Lightning payment proof',
+    'boltproof — Lightning invoice check',
     '',
-    'Result:          PAYMENT PROVEN',
-    'Amount:          ' + amountText.value,
-    'Paid for:        ' + memoText.value,
+    'Result:          INVOICE PAID',
+    'What this shows: the invoice signature is valid and sha256(preimage) matches the payment hash.',
+    'What this does not show: who paid. The signature authenticates the node that signed the invoice, not a payer. Anyone who knows the preimage can present it.',
+    d.amountMsat == null
+      ? 'Amount:          no amount set — the preimage does not prove how much was paid'
+      : 'Amount:          ' + amountText.value,
+    'Description:     ' + memoText.value,
     'Invoice created: ' + whenText.value,
     'Network:         ' + d.network,
     '',
@@ -99,7 +104,7 @@ function saveProof() {
     'Preimage:        ' + preimage.value.trim().toLowerCase(),
     'Invoice:         ' + invoice.value.trim(),
     '',
-    'Verified locally: valid BOLT11 signature && sha256(preimage) == payment_hash',
+    'Treat this file as sensitive. It contains the invoice and preimage.',
   ].join('\n')
   const url = URL.createObjectURL(new Blob([text], { type: 'text/plain' }))
   const a = document.createElement('a')
@@ -113,12 +118,12 @@ function saveProof() {
 
 const amountText = computed(() => {
   const m = decoded.value?.amountMsat
-  if (m == null) return 'Any amount'
+  if (m == null) return 'No amount set'
   return (m / 1000).toLocaleString('en-US', { maximumFractionDigits: 3 }) + ' sats'
 })
 const btcText = computed(() => {
   const m = decoded.value?.amountMsat
-  if (m == null) return 'Amount not fixed in this invoice'
+  if (m == null) return 'No amount in the invoice — the preimage does not prove how much was paid'
   return '≈ ' + (m / 1e11).toLocaleString('en-US', { maximumFractionDigits: 8 }) + ' BTC'
 })
 const memoText = computed(() => decoded.value?.description || '—')
@@ -193,8 +198,8 @@ const sparks = computed(() => Array.from({ length: 15 }, (_, i) => {
 
         <!-- FORM -->
         <div v-if="phase !== 'result'">
-          <h1 style="margin: 0 0 5px; font-size: 21px; font-weight: 700; letter-spacing: -.4px; color: #2b2622;">Did they really pay you?</h1>
-          <p style="margin: 0 0 22px; font-size: 14px; line-height: 1.5; color: #857b6f;">Paste the invoice and the secret they gave you. We'll confirm the payment is real.</p>
+          <h1 style="margin: 0 0 5px; font-size: 21px; font-weight: 700; letter-spacing: -.4px; color: #2b2622;">Was this invoice paid?</h1>
+          <p style="margin: 0 0 22px; font-size: 14px; line-height: 1.5; color: #857b6f;">Paste the invoice and the preimage. A match shows the invoice was paid, not who paid.</p>
 
           <div style="margin-bottom: 16px; position: relative;">
             <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 7px;">
@@ -205,7 +210,7 @@ const sparks = computed(() => Array.from({ length: 15 }, (_, i) => {
               style="width: 100%; resize: none; font-family: 'Space Mono', monospace; font-size: 12.5px; line-height: 1.5; word-break: break-all;"></textarea>
             <div v-if="help === 'invoice'" class="lv-tip">
               <span class="lv-tip-arrow" style="left: 106px;"></span>
-              The invoice is the payment request you sent — a long code starting with <span style="font-family: 'Space Mono', monospace; color: #ffc477;">lnbc</span>. It contains the amount and a locked fingerprint of the payment.
+              The payment request you sent — a long code starting with <span style="font-family: 'Space Mono', monospace; color: #ffc477;">lnbc</span>. Its signature authenticates the node that signed the invoice, not a payer.
             </div>
           </div>
 
@@ -218,7 +223,7 @@ const sparks = computed(() => Array.from({ length: 15 }, (_, i) => {
               style="width: 100%; font-family: 'Space Mono', monospace; font-size: 12.5px;" />
             <div v-if="help === 'preimage'" class="lv-tip">
               <span class="lv-tip-arrow" style="left: 132px;"></span>
-              Only the person who actually paid receives this secret. If it unlocks the invoice's fingerprint, the payment truly happened — no bank or receipt needed.
+              A match shows the invoice was paid, not who paid. Anyone who knows it can present it.
             </div>
           </div>
 
@@ -251,13 +256,13 @@ const sparks = computed(() => Array.from({ length: 15 }, (_, i) => {
                 <path d="M30 47.5 L41 58 L63 34" fill="none" stroke="#f7931a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="60" stroke-dashoffset="60" style="animation: lvDraw .4s cubic-bezier(.65,0,.35,1) .5s forwards;"></path>
               </svg>
             </div>
-            <h2 style="margin: 8px 0 4px; font-size: 22px; font-weight: 800; letter-spacing: -.4px; color: #2b2622; animation: lvRise .4s ease .5s both;">Payment proven</h2>
-            <p style="margin: 0 0 20px; font-size: 13.5px; color: #857b6f; animation: lvRise .4s ease .58s both;">The secret unlocked the invoice. This is real money, received.</p>
+            <h2 style="margin: 8px 0 4px; font-size: 22px; font-weight: 800; letter-spacing: -.4px; color: #2b2622; animation: lvRise .4s ease .5s both;">Invoice paid</h2>
+            <p style="margin: 0 0 20px; font-size: 13.5px; color: #857b6f; animation: lvRise .4s ease .58s both;">The preimage matches this invoice. That shows it was paid, not who paid.</p>
 
             <div style="position: relative; background: #fffdf9; border: 1px solid #f1e6d3; border-radius: 18px; padding: 20px 20px 16px; text-align: left; animation: lvPop .5s cubic-bezier(.34,1.3,.64,1) .62s both;">
               <div style="display: flex; align-items: center; gap: 7px; margin-bottom: 14px;">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="#f7931a"><path d="M13 2L4.5 13.5H11L10 22l8.5-11.5H12L13 2z" /></svg>
-                <span style="font-size: 10.5px; font-weight: 700; letter-spacing: 1.2px; color: #c88a2e;">PAYMENT PROVEN</span>
+                <span style="font-size: 10.5px; font-weight: 700; letter-spacing: 1.2px; color: #c88a2e;">INVOICE PAID</span>
               </div>
               <div style="font-size: 32px; font-weight: 800; letter-spacing: -1px; color: #2b2622; line-height: 1;">{{ amountText }}</div>
               <div style="font-size: 13px; color: #a89c8c; margin-top: 3px;">{{ btcText }}</div>
@@ -267,7 +272,7 @@ const sparks = computed(() => Array.from({ length: 15 }, (_, i) => {
               <div style="position: absolute; right: -8px; width: 16px; height: 16px; border-radius: 50%; background: #ffffff; border: 1px solid #f1e6d3; margin-top: -8px;"></div>
 
               <div style="display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px;">
-                <span style="font-size: 12.5px; color: #a89c8c;">Paid for</span>
+                <span style="font-size: 12.5px; color: #a89c8c;">Description</span>
                 <span style="font-size: 12.5px; font-weight: 600; color: #4a423a; text-align: right;">{{ memoText }}</span>
               </div>
               <div style="display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px;">
@@ -293,7 +298,7 @@ const sparks = computed(() => Array.from({ length: 15 }, (_, i) => {
               <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#cc5b47" stroke-width="2.6" stroke-linecap="round"><path d="M8 8l8 8M16 8l-8 8" /></svg>
             </div>
             <h2 style="margin: 0 0 5px; font-size: 21px; font-weight: 800; letter-spacing: -.4px; color: #2b2622;">These don't match</h2>
-            <p style="margin: 0 auto; max-width: 320px; font-size: 13.5px; line-height: 1.55; color: #857b6f;">This secret doesn't unlock this invoice. It doesn't prove <em>this</em> payment — double-check you copied both from the same transaction.</p>
+            <p style="margin: 0 auto; max-width: 320px; font-size: 13.5px; line-height: 1.55; color: #857b6f;">This preimage does not match this invoice, so it does not show the invoice was paid.</p>
           </div>
 
           <div style="display: flex; gap: 10px; margin-top: 22px;">
@@ -302,11 +307,12 @@ const sparks = computed(() => Array.from({ length: 15 }, (_, i) => {
             <button @click="reset" class="lv-hover-bright"
               style="flex: 1; padding: 13px; border: none; border-radius: 13px; background: linear-gradient(150deg, #ffb648, #f7931a); color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: 0 8px 18px -9px rgba(247,147,26,.6); transition: filter .15s;">Verify another</button>
           </div>
+          <p v-if="outcome === 'verified'" style="margin: 12px 0 0; font-size: 11.5px; line-height: 1.45; color: #a89c8c; text-align: center;">The proof file contains the invoice and preimage. Treat it as sensitive.</p>
         </div>
 
       </div>
 
-      <p style="text-align: center; margin: 16px 0 0; font-size: 11.5px; color: #b3a794;">No account, no data stored — everything happens in your browser.</p>
+      <p style="text-align: center; margin: 16px 0 0; font-size: 11.5px; color: #b3a794;">Your invoice and preimage are checked in this browser and are never transmitted.</p>
     </div>
   </div>
 </template>
